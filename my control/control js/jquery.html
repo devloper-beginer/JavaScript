@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mes Tâches – jQuery</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+<body>
+
+<h1>Mes tâches</h1>
+
+<fieldset>
+  <legend>Nouvelle Tâche :</legend>
+
+  ID : <input type="text" id="taskId" />
+  <input type="button" value="Lire" id="btnLire" />
+  <br /><br />
+
+  Titre : <input type="text" id="taskTitle" placeholder="Description de la tâche" />
+  <br /><br />
+
+  Priorité :
+  <input type="radio" name="priority" value="Urgent" /> Urgent
+  <input type="radio" name="priority" value="Normale" checked /> Normale
+  <input type="radio" name="priority" value="Faible" /> Faible
+  <br /><br />
+
+  <input type="button" value="Ajouter la tâche" id="btnAjouter" />
+</fieldset>
+
+<h2>Liste des tâches</h2>
+
+<p id="counter">Nombre des tâches terminées : 0 sur 1</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Titre</th>
+      <th>Priorité</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody id="taskBody">
+    <tr>
+      <td>1</td>
+      <td>Réviser Javascript</td>
+      <td style="color:red;">Urgent</td>
+      <td><input type="button" value="Terminer" class="btnTerminer" data-idx="0" /></td>
+    </tr>
+  </tbody>
+</table>
+
+<script>
+$(document).ready(function () {
+
+  var tasks = [
+    { id: "1", titre: "Réviser Javascript", priorite: "Urgent", done: false }
+  ];
+
+  
+  function valider(id, titre) {
+    if ($.trim(id) == "" || $.trim(titre) == "") {
+      alert("Les champs ID et Titre sont obligatoires.");
+      return false;
+    }
+    return true;
+  }
+
+  
+  function actualiser() {
+    var termines = $.grep(tasks, function (t) { return t.done; }).length;
+    $("#counter").text("Nombre des tâches terminées : " + termines + " sur " + tasks.length);
+  }
+
+  
+  $("#btnAjouter").on("click", function () {
+    var id    = $("#taskId").val();
+    var titre = $("#taskTitle").val();
+    var prio  = $("input[name='priority']:checked").val();
+
+    if (!valider(id, titre)) return;
+
+    tasks.push({ id: id, titre: titre, priorite: prio, done: false });
+
+    var couleur = "";
+    if (prio == "Urgent") couleur = "red";
+    else if (prio == "Faible") couleur = "green";
+
+    var idx = tasks.length - 1;
+    var $tr = $("<tr>");
+    $tr.append(
+      $("<td>").text(id),
+      $("<td>").text(titre),
+      $("<td>").css("color", couleur).text(prio),
+      $("<td>").append(
+        $("<input>").attr({ type: "button", value: "Terminer", class: "btnTerminer", "data-idx": idx })
+      )
+    );
+    $("#taskBody").append($tr);
+
+    actualiser();
+
+    $("#taskId, #taskTitle").val("");
+    $("input[name='priority'][value='Normale']").prop("checked", true);
+  });
+
+  
+  $("#btnLire").on("click", function () {
+    var id = $.trim($("#taskId").val());
+    var found = $.grep(tasks, function (t) { return t.id == id; })[0];
+
+    if (!found) {
+      alert("Aucune tâche trouvée avec l'ID : " + id);
+      return;
+    }
+    $("#taskTitle").val(found.titre);
+    $("input[name='priority'][value='" + found.priorite + "']").prop("checked", true);
+  });
+
+  
+  $("#taskBody").on("click", ".btnTerminer", function () {
+    var idx = $(this).data("idx");
+    tasks[idx].done = true;
+    var $tr = $(this).closest("tr");
+    $tr.find("td:not(:last)").css({ "text-decoration": "line-through", "color": "gray" });
+    $(this).prop("disabled", true);
+    actualiser();
+  });
+
+  actualiser();
+
+});
+</script>
+
+</body>
+</html>

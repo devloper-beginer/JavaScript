@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mes Tâches</title>
+</head>
+<body>
+<h1>Mes tâches</h1>
+<fieldset>
+ <legend>Nouvelle Tâche :</legend>
+    ID :            <input type="text" id="taskId" />
+   <input type="button" value="Lire" id="btnLire" />
+   <br /><br />
+    Titre :      <input type="text" id="taskTitle" placeholder="Description de la tâche" />
+   <br /><br />
+   Priorite :  
+   <input type="radio" name="priority" value="Urgent" /> Urgent
+   <input type="radio" name="priority" value="Normale" checked /> Normale
+   <input type="radio" name="priority" value="Faible" /> Faible
+   <br /><br />
+   <input type="button" value="Ajouter la tâche" id="btnAjouter" />
+
+
+
+</fieldset>
+<h2>Liste des tâches</h2>
+<p id="counter">Nombre des tâches terminées : 0 sur 1</p>
+<table border="1" cellpadding="5" cellspacing="0">
+ <thead>
+    <tr>
+      <th>ID</th>
+      <th>Titre</th>
+      <th>Priorité</th>
+      <th>Action</th>
+    </tr>
+ </thead>
+ <tbody id="taskBody">
+    <tr>
+      <td>1</td>
+      <td>Réviser Javascript</td>
+      <td style="color:red;">Urgent</td>
+      <td><input type="button" value="Terminer" onclick="terminer(this, 0)" /></td>
+    </tr>
+  </tbody>
+</table>
+<script>
+  var tasks = [
+    { id: "1", titre: "Réviser Javascript", priorite: "Urgent", done: false }
+  ];
+
+
+
+
+  function valider(id, titre) {
+    if (id == "" || titre == "") {
+      alert("Les champs ID et Titre sont obligatoires.");
+      return false;
+    }
+    return true;
+  }
+
+
+
+  function actualiser() {
+    var termines = 0;
+    for (var i = 0; i < tasks.length; i++) {
+      if (tasks[i].done) termines++;
+    }
+    document.getElementById("counter").innerHTML =
+      "Nombre des tâches terminées : " + termines + " sur " + tasks.length;
+  }
+
+
+  document.getElementById("btnAjouter").onclick = function () {
+    var id    = document.getElementById("taskId").value;
+    var titre = document.getElementById("taskTitle").value;
+    var radios = document.getElementsByName("priority");
+    var prio = "";
+    for (var i = 0; i < radios.length; i++) {
+      if (radios[i].checked) { prio = radios[i].value; break; }
+    }
+    if (!valider(id, titre)) return;
+
+    tasks.push({ id: id, titre: titre, priorite: prio, done: false });
+
+    var couleur = "";
+    if (prio == "Urgent") couleur = "red";
+    else if (prio == "Faible") couleur = "green";
+
+    var idx = tasks.length - 1;
+    var tbody = document.getElementById("taskBody");
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + id + "</td>" +
+      "<td>" + titre + "</td>" +
+      "<td style='color:" + couleur + ";'>" + prio + "</td>" +
+      "<td><input type='button' value='Terminer' onclick='terminer(this," + idx + ")' /></td>";
+    tbody.appendChild(tr);
+
+    actualiser();
+
+    document.getElementById("taskId").value = "";
+    document.getElementById("taskTitle").value = "";
+    document.getElementsByName("priority")[1].checked = true;
+  };
+
+  
+  document.getElementById("btnLire").onclick = function () {
+    var id = document.getElementById("taskId").value;
+    var found = null;
+    for (var i = 0; i < tasks.length; i++) {
+      if (tasks[i].id == id) { found = tasks[i]; break; }
+    }
+    if (!found) {
+      alert("Aucune tâche trouvée avec l'ID : " + id);
+      return;
+    }
+    document.getElementById("taskTitle").value = found.titre;
+    var radios = document.getElementsByName("priority");
+    for (var i = 0; i < radios.length; i++) {
+      radios[i].checked = (radios[i].value == found.priorite);
+    }
+  };
+
+  
+  function terminer(btn, idx) {
+    tasks[idx].done = true;
+    var tr = btn.parentNode.parentNode;
+    var tds = tr.getElementsByTagName("td");
+    for (var i = 0; i < tds.length - 1; i++) {
+      tds[i].style.textDecoration = "line-through";
+      tds[i].style.color = "gray";
+    }
+    btn.disabled = true;
+    actualiser();
+  }
+
+  actualiser();
+
+</script>
+
+</table>
+</body>
+</html>

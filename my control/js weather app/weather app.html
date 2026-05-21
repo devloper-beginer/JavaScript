@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { inter: ['Inter', 'sans-serif'] } } }
+    }
+  </script>
+</head>
+<body class="font-inter min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-sky-800 flex items-center justify-center p-4">
+
+  <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl w-full max-w-md p-8 text-white text-center">
+
+    <h1 class="text-3xl font-bold mb-1 tracking-wide">🌤 Weather App</h1>
+    <p class="text-blue-200 text-sm mb-6">Enter any city name to get current weather</p>
+
+    <!-- Search -->
+    <div class="flex gap-2 mb-6">
+      <input
+        id="cityInput"
+        type="text"
+        placeholder="e.g. London, Tokyo, New York..."
+        class="flex-1 bg-white/20 border border-white/30 text-white placeholder-blue-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-white/50 transition"
+      />
+      <button
+        id="searchBtn"
+        class="bg-white text-blue-800 font-bold px-5 py-3 rounded-xl hover:bg-blue-100 active:scale-95 transition-all duration-150 text-sm"
+      >
+        Search
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="hidden text-blue-200 text-sm animate-pulse mb-4">Fetching weather data...</div>
+
+    <!-- Error -->
+    <div id="error" class="hidden bg-red-500/20 border border-red-400/30 rounded-xl px-4 py-3 text-red-200 text-sm mb-4"></div>
+
+    <!-- Result Card -->
+    <div id="result" class="hidden bg-white/10 border border-white/20 rounded-2xl p-6 mt-2">
+      <p id="cityName" class="text-2xl font-bold mb-1"></p>
+      <p id="country" class="text-blue-300 text-sm mb-5"></p>
+
+      <div class="flex justify-around items-center mb-6">
+        <div>
+          <p id="temp" class="text-6xl font-bold"></p>
+          <p class="text-blue-300 text-xs mt-1">Temperature</p>
+        </div>
+        <div class="text-center">
+          <p id="weatherIcon" class="text-5xl"></p>
+          <p id="weatherDesc" class="text-blue-200 text-xs mt-1"></p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 text-sm">
+        <div class="bg-white/10 rounded-xl p-3">
+          <p class="text-blue-300 text-xs mb-1">💨 Wind</p>
+          <p id="wind" class="font-semibold"></p>
+        </div>
+        <div class="bg-white/10 rounded-xl p-3">
+          <p class="text-blue-300 text-xs mb-1">🧭 Direction</p>
+          <p id="windDir" class="font-semibold"></p>
+        </div>
+        <div class="bg-white/10 rounded-xl p-3">
+          <p class="text-blue-300 text-xs mb-1">🌡 Feels</p>
+          <p id="feelsLike" class="font-semibold"></p>
+        </div>
+      </div>
+
+      <p id="localTime" class="text-blue-300 text-xs mt-4"></p>
+    </div>
+
+  </div>
+
+  <script>
+    const WMO_CODES = {
+      0:  ['☀️', 'Clear Sky'],
+      1:  ['🌤', 'Mainly Clear'],
+      2:  ['⛅', 'Partly Cloudy'],
+      3:  ['☁️', 'Overcast'],
+      45: ['🌫', 'Foggy'],
+      48: ['🌫', 'Icy Fog'],
+      51: ['🌦', 'Light Drizzle'],
+      53: ['🌦', 'Moderate Drizzle'],
+      55: ['🌧', 'Heavy Drizzle'],
+      61: ['🌧', 'Light Rain'],
+      63: ['🌧', 'Moderate Rain'],
+      65: ['🌧', 'Heavy Rain'],
+      71: ['🌨', 'Light Snow'],
+      73: ['🌨', 'Moderate Snow'],
+      75: ['❄️', 'Heavy Snow'],
+      80: ['🌦', 'Rain Showers'],
+      81: ['🌧', 'Moderate Showers'],
+      82: ['⛈', 'Violent Showers'],
+      95: ['⛈', 'Thunderstorm'],
+      99: ['⛈', 'Thunderstorm + Hail'],
+    };
+
+    function getWindDirection(deg) {
+      const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+      return dirs[Math.round(deg / 45) % 8];
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', fetchWeather);
+    document.getElementById('cityInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') fetchWeather();
+    });
+
+    function fetchWeather() {
+      const city = document.getElementById('cityInput').value.trim();
+      if (!city) { showError('Please enter a city name.'); return; }
+
+      setLoading(true);
+      clearResult();
+      clearError();
+
+      fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en`)
+        .then(r => r.json())
+        .then(geoData => {
+          if (!geoData.results?.length) throw new Error('City not found. Check the spelling and try again.');
+          const loc = geoData.results[0];
+          return fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current_weather=true&hourly=apparent_temperature&timezone=auto`)
+            .then(r => r.json())
+            .then(w => ({ loc, weather: w.current_weather, timezone: w.timezone, hourly: w.hourly }));
+        })
+        .then(({ loc, weather, timezone, hourly }) => {
+          const [icon, desc] = WMO_CODES[weather.weathercode] ?? ['🌡', 'Unknown'];
+
+          // Apparent temperature (feels like) — match current hour index
+          const currentHour = new Date().toISOString().slice(0, 13);
+          const hourIndex = hourly.time.findIndex(t => t.startsWith(currentHour));
+          const feelsLike = hourIndex !== -1 ? Math.round(hourly.apparent_temperature[hourIndex]) : '—';
+
+          // Local time in city
+          const localTime = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            hour: '2-digit', minute: '2-digit', weekday: 'short', month: 'short', day: 'numeric'
+          }).format(new Date());
+
+          document.getElementById('cityName').textContent = loc.name;
+          document.getElementById('country').textContent = `${loc.admin1 ? loc.admin1 + ' · ' : ''}${loc.country}`;
+          document.getElementById('temp').textContent = `${Math.round(weather.temperature)}°C`;
+          document.getElementById('weatherIcon').textContent = icon;
+          document.getElementById('weatherDesc').textContent = desc;
+          document.getElementById('wind').textContent = `${weather.windspeed} km/h`;
+          document.getElementById('windDir').textContent = getWindDirection(weather.winddirection);
+          document.getElementById('feelsLike').textContent = `${feelsLike}°C`;
+          document.getElementById('localTime').textContent = `🕐 Local time: ${localTime}`;
+
+          document.getElementById('result').classList.remove('hidden');
+        })
+        .catch(err => showError(err.message || 'Connection error. Please try again.'))
+        .finally(() => setLoading(false));
+    }
+
+    function setLoading(show) {
+      document.getElementById('loading').classList.toggle('hidden', !show);
+    }
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function clearError() { document.getElementById('error').classList.add('hidden'); }
+    function clearResult() { document.getElementById('result').classList.add('hidden'); }
+  </script>
+
+</body>
+</html>
