@@ -1,2 +1,2 @@
 # JavaScript
-"My first JavaScript projects — beginner-level programming exercises covering basic algorithms, conditional statements, and loops."
+"My first JavaScript projects — beginner-level exercises covering the basics of the language."
